@@ -141,6 +141,39 @@ def cmd_link(ctx, args):
     print(f"Listing #{args.listing_id} marked active -> {args.url}")
 
 
+def cmd_activate(ctx, args):
+    """Make Etsy drafts live. Running this is the owner's approval: each one costs the listing fee."""
+    from .integrations.etsy_api import EtsyAPI, EtsyError
+    ctx.guard.assert_running()
+    api = EtsyAPI(ctx)
+    if not api.can_write:
+        sys.exit("Connect Etsy first: python -m ultron etsy-auth")
+    if args.all:
+        rows = ctx.db.all("SELECT * FROM listings WHERE platform = 'etsy' AND status = 'draft' "
+                          "AND external_id IS NOT NULL ORDER BY id")
+    else:
+        rows = [ctx.db.one("SELECT * FROM listings WHERE id = ?", i) for i in args.ids]
+    if not rows:
+        sys.exit("Nothing to activate. Pass listing ids, or --all for every Etsy draft.")
+    fee = ctx.cfg["teams"]["etsy"]["listing_fee_usd"]
+    done = 0
+    for r in rows:
+        if not r or r["status"] != "draft" or not r["external_id"]:
+            print(f"#{r['id'] if r else '?'}: skipped (not an Etsy draft)")
+            continue
+        try:
+            data = api.update_listing(r["external_id"], state="active")
+        except EtsyError as err:
+            print(f"#{r['id']}: Etsy refused: {err}")
+            continue
+        url = data.get("url") or r["url"]
+        ctx.db.update("listings", r["id"], status="active", url=url)
+        ctx.db.insert("expenses", team="etsy", kind="listing_fee", amount_usd=fee, note=f"listing {r['external_id']}")
+        print(f"#{r['id']}: live at {url}")
+        done += 1
+    print(f"{done} listing(s) activated, ${done * fee:.2f} in Etsy listing fees logged as expenses.")
+
+
 def cmd_lessons(ctx, args):
     for r in ctx.db.all("SELECT * FROM playbook ORDER BY id"):
         print(f"[{r['team']}/{r['source']}] {r['lesson']}")
@@ -256,6 +289,9 @@ def main(argv=None):
     s.add_argument("listing_id", type=int)
     s.add_argument("--url", required=True)
     s.add_argument("--external-id")
+    s = sub.add_parser("activate", help="make Etsy drafts live (costs the listing fee each)")
+    s.add_argument("ids", nargs="*", type=int)
+    s.add_argument("--all", action="store_true", help="every Etsy draft")
     sub.add_parser("lessons", help="show the playbook")
     sub.add_parser("stop", help="kill switch on")
     sub.add_parser("resume", help="kill switch off")
@@ -284,7 +320,7 @@ def main(argv=None):
     ctx = context.load()
     handlers = {
         "cycle": cmd_cycle, "review": cmd_review, "publish": cmd_publish, "status": cmd_status,
-        "listings": cmd_listings, "metrics": cmd_metrics, "link": cmd_link, "lessons": cmd_lessons,
+        "listings": cmd_listings, "metrics": cmd_metrics, "link": cmd_link, "lessons": cmd_lessons, "activate": cmd_activate,
         "stop": cmd_stop, "resume": cmd_resume, "retry": cmd_retry, "chat": cmd_chat, "hq": cmd_hq, "hq-demo": cmd_hq_demo, "edit": cmd_edit, "revise": cmd_revise, "etsy-auth": cmd_etsy_auth, "etsy-taxonomy": cmd_etsy_taxonomy,
         "approve": lambda c, a: cmd_decide(c, a, True), "reject": lambda c, a: cmd_decide(c, a, False),
     }

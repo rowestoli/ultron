@@ -55,7 +55,7 @@ python -m ultron status
 2. **API key only:** the researcher checks every niche against live Etsy search, counting competing listings and averaging favorites on the top results.
 3. **`python -m ultron etsy-auth`:** OAuth login. Once connected, approved listings are created through the API and analytics pull views, favorites and sales.
 4. **`python -m ultron etsy-taxonomy planner`:** pick a category id and set `teams.etsy.taxonomy_id`.
-5. **`publish_state: draft`** (the default) puts listings into your shop as drafts that you activate yourself. Switch it to `active` once you trust the pipeline. Etsy charges $0.20 per active listing, and that fee is logged as an expense.
+5. **`publish_state: draft`** (the default) puts listings into your shop as drafts that you activate yourself. Switch it to `active` once you trust the pipeline. Etsy charges $0.20 per active listing, and that fee is logged as an expense. To make drafts live later, run `python -m ultron activate --all` (or pass listing ids); running it is your approval for the fees.
 
 Without OAuth, `publish` writes a folder per listing to `out/packets/etsy/`. Each folder has the PDF, the image, and the title, tags and description, ready to paste into Etsy. After you upload by hand, run:
 
