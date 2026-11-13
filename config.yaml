@@ -1,0 +1,53 @@
+# Ultron configuration. Secrets go in .env, not here.
+
+llm:
+  # anthropic | openai_compatible | mock
+  #   mock              -> no API calls, canned responses (use to test the loop for free)
+  #   anthropic         -> Claude API (needs ANTHROPIC_API_KEY)
+  #   openai_compatible -> OpenAI, OpenRouter, or Ollama on your PC (set base_url)
+  provider: mock
+  base_url: null            # e.g. http://<your-pc-ip>:11434/v1 for Ollama on the RTX 3060 box
+  models:
+    fast: claude-haiku-5-5  # routine work: listing copy, tags, pin text, design specs
+    smart: claude-sonnet-5-5 # judgment: niche selection, analysis, Ultron's strategy memo
+    # For Ollama, e.g. fast: qwen3:8b  smart: qwen3:14b
+  # USD per million tokens [input, output]. Haiku 5.5 rate applies to prompts under 100K tokens.
+  # Local models cost $0 -> leave them out and they're treated as free.
+  pricing:
+    claude-haiku-5-5: [0.10, 0.50]
+    claude-sonnet-5-5: [2.00, 10.00]
+
+budget:
+  daily_llm_usd: 1.00        # hard cap on LLM spend per day, all teams combined
+  monthly_llm_usd: 20.00     # hard cap per calendar month
+  cycle_llm_usd: 0.50        # max LLM spend Ultron hands out per cycle
+
+safety:
+  require_approval: true     # every publish/post action waits for you in `ultron review`
+  kill_switch_file: STOP     # if this file exists in the project folder, nothing runs
+
+ultron:
+  explore_share: 0.3         # share of product-team budget split evenly regardless of ROI
+  support_share: 0.15        # fixed share for support teams (Pinterest)
+  lookback_days: 30          # window for ROI calculations
+  write_memo: true           # Ultron writes a short strategy memo each cycle (smart tier)
+
+teams:
+  etsy:
+    enabled: true
+    role: product
+    niches_per_cycle: 3      # candidate niches researched per cycle
+    products_per_cycle: 2    # printables designed and queued per cycle
+    default_price_usd: 4.99
+    listing_fee_usd: 0.20
+    publish_state: draft     # draft = lands in Etsy as a draft you activate; active = goes live
+    taxonomy_id: 12476       # Paper & Party Supplies > ... > Templates > Planner Templates
+    taxonomy_by_type:        # optional per-product-type category (falls back to taxonomy_id)
+      worksheet: 12471       # ... > Design & Templates > Worksheets
+    product_types: [planner, checklist, tracker, worksheet, log]
+
+  pinterest:
+    enabled: true
+    role: support
+    pins_per_cycle: 3
+    repin_after_days: 14     # make a fresh pin for a listing after this many days

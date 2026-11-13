@@ -1,0 +1,10 @@
+.env
+data/
+out/
+STOP
+__pycache__/
+.venv/
+mock-backup/
+.DS_Store
+*.zip
+site/
